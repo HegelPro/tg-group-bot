@@ -1,2 +1,0 @@
-schema: 'https://tg-store.site'
-documents: 'src/**/*.{graphql,js,ts,jsx,tsx}'
