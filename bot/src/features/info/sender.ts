@@ -1,24 +1,21 @@
 import { bot } from '../../bot'
 import { wrapDailyMessage } from '../../messageWrappers'
 import { DailySender } from '../../sender'
-import {
-  isFriday,
-  isMonday,
-  isThursday,
-  isTuesday,
-} from 'date-fns'
+import { isFriday, isMonday, isThursday, isTuesday } from 'date-fns'
 
+const randomNumber = (num: number) => Math.floor(Math.random() * num)
 
 export const dailyInfoSenders: DailySender[] = [
   {
     type: 'daily',
     predicate: () => isMonday(Date.now()),
     handler: (chatInfo) => {
+      const user = chatInfo.members[randomNumber(chatInfo.members.length)].user
       bot.api.sendMessage(
         chatInfo.id,
         wrapDailyMessage(
-          `Сегодня день порно! Сегодня ролик выбирает: ${
-            chatInfo.messages[chatInfo.messages.length - 1].from.first_name
+          `Сегодня день порно! Сегодня ролик выбирает: @${
+            user.username || user.first_name
           }`,
         ),
       )
@@ -42,10 +39,7 @@ export const dailyInfoSenders: DailySender[] = [
     type: 'daily',
     predicate: () => isThursday(Date.now()),
     handler: (chatInfo) => {
-      bot.api.sendMessage(
-        chatInfo.id,
-        wrapDailyMessage('Встаем на зарядку!'),
-      )
+      bot.api.sendMessage(chatInfo.id, wrapDailyMessage('Встаем на зарядку!'))
       bot.api.sendVideo(
         chatInfo.id,
         'https://github.com/HegelPro/HegelPro.github.io/raw/master/1006705794_An_evFMekFtoydFf22yL5Rx8LliJ4QQpmm2iOU2sNWXfYazQWt9rgLenxqtIF.mp4',

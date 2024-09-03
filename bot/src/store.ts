@@ -6,7 +6,8 @@ const user = T.type({
   id: T.number,
   is_bot: T.boolean,
   first_name: T.string,
-  // username: T.union([T.string, T.undefined]),
+  username: T.union([T.string, T.undefined]),
+  last_name: T.union([T.string, T.undefined]),
 })
 export type User = T.TypeOf<typeof user>
 

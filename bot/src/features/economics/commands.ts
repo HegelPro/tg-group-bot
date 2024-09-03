@@ -5,6 +5,7 @@ import {
   createDefaultChatInfo,
   createDefaultMember,
   Member,
+  User,
 } from '../../store'
 import table from 'text-table'
 import { reactionToValue } from './config'
@@ -28,7 +29,7 @@ export const registerCommand: Command = {
             ...chatInfo,
             members: insertDefaultIfNotFound(chatInfo.members)(
               (member) => member.user.id === ctx.message?.from.id,
-            )(createDefaultMember(user)),
+            )(createDefaultMember(user as User)),
           }
         : chatInfo,
     )
