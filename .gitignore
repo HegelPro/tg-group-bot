@@ -4,4 +4,5 @@ src/generated/
 *.env*
 *.db
 prismaStudio.sh
+prismaMigrateDev.sh
 db/
