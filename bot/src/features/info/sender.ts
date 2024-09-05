@@ -1,4 +1,6 @@
 import { bot } from '../../bot'
+import { prisma } from '../../db'
+import { getMembers } from '../../gets'
 import { wrapDailyMessage } from '../../messageWrappers'
 import { DailySender } from '../../sender'
 import { isFriday, isMonday, isThursday, isTuesday } from 'date-fns'
@@ -9,8 +11,15 @@ export const dailyInfoSenders: DailySender[] = [
   {
     type: 'daily',
     predicate: () => isMonday(Date.now()),
-    handler: (chatInfo) => {
-      const user = chatInfo.members[randomNumber(chatInfo.members.length)].user
+    handler: async (chatInfo) => {
+      const members = await getMembers(chatInfo.telegramChatId)      
+      const telegramUserId = members[randomNumber(members.length)].telegramUserId
+      const user = await prisma.telegramUser.findFirstOrThrow({
+        where: {
+          id: telegramUserId,
+        }
+      })
+
       bot.api.sendMessage(
         chatInfo.id,
         wrapDailyMessage(

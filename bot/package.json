@@ -5,6 +5,7 @@
     "dev": "ENV_FILE=.env.dev ts-node-dev --no-notify --respawn --transpile-only src/main",
     "start": "node dist/main",
     "clean": "rm -rf dist",
+    "prisma:generate": "prisma generate",
     "build:start": "npm run build && npm run start",
     "build": "npm run clean && tsc"
   },
@@ -14,6 +15,7 @@
     "trailingComma": "all"
   },
   "dependencies": {
+    "@prisma/client": "^5.19.1",
     "axios": "^1.7.5",
     "date-fns": "^3.6.0",
     "fp-ts": "^2.16.0",
@@ -27,6 +29,7 @@
     "@types/node": "18.13.0",
     "@types/text-table": "^0.2.5",
     "dotenv": "^16.1.4",
+    "prisma": "^5.19.1",
     "ts-node": "10.9.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "4.9.5"

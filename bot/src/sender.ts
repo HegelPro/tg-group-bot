@@ -1,12 +1,7 @@
 import { addDays, addHours, isAfter } from 'date-fns'
 import { getChatInfos, getGlobalData } from './gets'
-import { ChatInfo } from './store'
-import {
-  writeDurovCounter,
-  writeHourlyTimestamp,
-  writeDailyTimestamp,
-  writeChatInfos,
-} from './writes'
+import { writeHourlyTimestamp, writeDailyTimestamp } from './writes'
+import { ChatInfo } from '@prisma/client'
 
 export interface BaseSender {
   predicate: () => boolean
@@ -25,42 +20,34 @@ export type Sender = DailySender | HourlySender
 
 const DELAY_5_MINUTS = 5 * 60 * 1000
 
-export const dailyFunction = (callback: () => void) => {
-  const dailyTimestamp = getGlobalData().dailyTimestamp
+export const dailyFunction = async (callback: () => void) => {
+  const dailyTimestamp = (await getGlobalData()).dailyTimestamp
   const date = new Date()
+
   console.log('loop часов', date.getHours(), 'минут', date.getMinutes())
+
   if (isAfter(Date.now(), dailyTimestamp)) {
     callback()
-    writeDailyTimestamp(addDays(dailyTimestamp, 1).getTime())
+    writeDailyTimestamp(addDays(dailyTimestamp, 1))
   }
 }
 
-export const hourlyFunction = (callback: () => void) => {
-  const hourlyTimestamp = getGlobalData().hourlyTimestamp
+export const hourlyFunction = async (callback: () => void) => {
+  const hourlyTimestamp = (await getGlobalData()).hourlyTimestamp
   if (isAfter(Date.now(), hourlyTimestamp)) {
     callback()
-    writeHourlyTimestamp(addHours(hourlyTimestamp, 1).getTime())
+    writeHourlyTimestamp(addHours(hourlyTimestamp, 1))
   }
 }
 
 export function registerSenders(senders: Sender[]) {
-  function loop() {
+  async function loop() {
+    const chatInfos = await getChatInfos()
     const dailySenders = senders.filter((sender) => sender.type === 'daily')
     dailyFunction(() => {
-      const durovCounter = getGlobalData().durovCounter
-      writeDurovCounter(durovCounter + 1)
-      const chatInfos = getChatInfos().map((chatInfo) => ({
-        ...chatInfo,
-        members: chatInfo.members.map((member) => ({
-          ...member,
-          data: { ...member.data, clownCounter: member.data.clownCounter + 1 },
-        })),
-      }))
-      writeChatInfos(chatInfos)
-
       dailySenders.forEach((dailySender) => {
         if (dailySender.predicate()) {
-          getChatInfos().forEach((chatInfo) => dailySender.handler(chatInfo))
+          chatInfos.forEach((chatInfo) => dailySender.handler(chatInfo))
         }
       })
     })
@@ -69,7 +56,7 @@ export function registerSenders(senders: Sender[]) {
     hourlyFunction(() => {
       hourlySenders.forEach((hourlySender) => {
         if (hourlySender.predicate()) {
-          getChatInfos().forEach((chatInfo) => hourlySender.handler(chatInfo))
+          chatInfos.forEach((chatInfo) => hourlySender.handler(chatInfo))
         }
       })
     })

@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model TelegramUser {
+  id                       Float    @id
+  is_bot                   Boolean
+  first_name               String
+  last_name                String?
+  username                 String?
+  language_code            String?
+  is_premium               Boolean?
+  added_to_attachment_menu Boolean?
+
+  Members       Member[]
+  MessageEvents MessageEvent[]
+
+  FromReactionMessageEvent ReactionMessageEvent[] @relation("from")
+  ToReactionMessageEvent   ReactionMessageEvent[] @relation("to")
+}
+
+model Member {
+  id Int @id @default(autoincrement())
+
+  telegramUser   TelegramUser @relation(fields: [telegramUserId], references: [id])
+  telegramUserId Float
+
+  reactionScore Float
+  clownCounter  Float
+  chatInfo      ChatInfo? @relation(fields: [chatInfoId], references: [id])
+  chatInfoId    Int?
+}
+
+enum TelegramChatType {
+  private
+  group
+  supergroup
+  channel
+}
+
+model TelegramChat {
+  id         Float            @id
+  first_name String?
+  is_forum   Boolean?
+  last_name  String?
+  title      String?
+  type       TelegramChatType
+  username   String?
+
+  MessageEvents         MessageEvent[]
+  ReactionMessageEvents ReactionMessageEvent[]
+  ChatInfo              ChatInfo[]
+}
+
+model MessageEvent {
+  id Float @id
+
+  from    TelegramUser @relation(fields: [from_id], references: [id])
+  from_id Float
+  chat    TelegramChat @relation(fields: [chat_id], references: [id])
+  chat_id Float
+
+  date DateTime
+  text String?
+
+  ChatInfo             ChatInfo[]
+  ReactionMessageEvent ReactionMessageEvent[]
+}
+
+model ChatInfo {
+  id Int @id @default(autoincrement())
+
+  chat           TelegramChat @relation(fields: [telegramChatId], references: [id])
+  telegramChatId Float
+
+  subscribed Boolean
+
+  members       Member[]
+  messageEvents MessageEvent[]
+}
+
+enum ReactionType {
+  emoji
+  custom_emoji
+  paid
+}
+
+model ReactionMessageEvent {
+  id Int @id @default(autoincrement())
+
+  chat      TelegramChat @relation(fields: [chatId], references: [id])
+  chatId    Float
+  from      TelegramUser @relation(fields: [fromId], references: [id], name: "from")
+  fromId    Float
+  to        TelegramUser @relation(fields: [toId], references: [id], name: "to")
+  toId      Float
+  message   MessageEvent @relation(fields: [messageId], references: [id])
+  messageId Float        @default(0)
+
+  date        DateTime
+  oldReaction String[]
+  newReaction String[]
+  different   Float
+}
+
+model Global {
+  id              Int      @id @default(autoincrement())
+  dailyTimestamp  DateTime
+  hourlyTimestamp DateTime
+}

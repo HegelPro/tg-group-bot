@@ -3,5 +3,5 @@ dist/
 src/generated/
 *.env*
 *.db
-
+prismaStudio.sh
 db/

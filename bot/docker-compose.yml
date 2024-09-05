@@ -1,0 +1,31 @@
+version: '3.7'
+services:
+  tg-bot:
+    container_name: tg-bot
+    restart: always
+    build: .
+    volumes:
+      - ./db:/app/db
+      - ./src:/app/src
+    env_file:
+      - .env
+    networks:
+      - db-group-bot-network
+    depends_on:
+      - db-group-bot
+  db-group-bot:
+    image: postgres
+    container_name: db-group-bot
+    restart: always
+    volumes:
+      - ~/Documents/db-group-bot-postgres-data:/var/lib/postgresql/data
+    ports:
+      - '5433:5432'
+    env_file:
+      - .env
+    networks:
+      - db-group-bot-network
+
+networks:
+  db-group-bot-network:
+    driver: bridge

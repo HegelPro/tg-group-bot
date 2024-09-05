@@ -1,8 +1,0 @@
-version: '3.7'
-services:
-  tg-bot:
-    restart: always
-    build: ./bot
-    volumes:
-      - ./bot/db:/app/db
-      - ./bot/src:/app/src
