@@ -6,7 +6,6 @@ import {
   clownCommand,
   getReactionValueCommand,
   getStatisticCommand,
-  whoIsTheBestCommand,
 } from './features/economics/commands'
 import { Command, registerCommands } from './command'
 import { wikiCommand } from './features/info/commands'
@@ -23,7 +22,6 @@ const commands: Command[] = [
   wikiCommand,
   getStatisticCommand,
   getReactionValueCommand,
-  whoIsTheBestCommand,
   sendVideoCommand,
   clownCommand,
 ]

@@ -2,6 +2,7 @@ import { Command } from '../../command'
 import table from 'text-table'
 import { reactionToValue } from './config'
 import { prisma } from '../../db'
+import { differenceInDays } from 'date-fns'
 
 export const getStatisticCommand: Command = {
   command: 'statistic',
@@ -11,10 +12,20 @@ export const getStatisticCommand: Command = {
     const personStatistic = await prisma.reactionMessageEvent.groupBy({
       where: {
         chatId: ctx.chat.id,
+        toId: {
+          not: {
+            equals: prisma.reactionMessageEvent.fields.fromId,
+          },
+        },
       },
       by: ['toId'],
       _sum: {
         different: true,
+      },
+      orderBy: {
+        _sum: {
+          different: 'desc',
+        },
       },
     })
     console.log('personStatistic:', personStatistic)
@@ -26,18 +37,28 @@ export const getStatisticCommand: Command = {
         },
       },
     })
-    // console.log('members:', members)
 
-    const tableStat =
-      telegramUsers.map((telegramUser) => [
-        telegramUser.username || telegramUser.first_name,
-        personStatistic.find(
-          (personStat) => personStat.toId === telegramUser.id,
-        )?._sum.different || 0,
-      ])
+    const tableStat = personStatistic.map((personStat) => {
+      const telegramUser = telegramUsers.find(
+        (telegramUser) => telegramUser.id === personStat.toId,
+      )
+      return [
+        telegramUser?.username || telegramUser?.first_name || 'unknown',
+        personStat._sum.different || 0,
+        telegramUser?.is_premium ? 'Буржуй' : 'Пролетариат',
+      ]
+    })
 
     console.log('statistic:\n', tableStat)
-    ctx.reply(table([['Имя', 'Респект коины'], ...tableStat]))
+    ctx.reply(
+      `\`\`\`\n${table([
+        ['Имя', 'Респект коины', 'Телеграм статус'],
+        ...tableStat,
+      ])}\n\`\`\``,
+      {
+        parse_mode: 'MarkdownV2',
+      },
+    )
   },
 }
 
@@ -46,13 +67,16 @@ export const getReactionValueCommand: Command = {
   description: 'Узнать количество респекта за реакцию',
   handler: (ctx) => {
     ctx.reply(
-      table(
+      `\`\`\`\n${table(
         reactionToValue.map(([reactions, value]) => [
           value,
           '=',
           reactions.join(', '),
         ]),
-      ),
+      )}\n\`\`\``,
+      {
+        parse_mode: 'MarkdownV2',
+      },
     )
   },
 }
@@ -73,30 +97,60 @@ export const getReactionValueCommand: Command = {
 //   },
 // }
 
-export const whoIsTheBestCommand: Command = {
-  command: 'best',
-  description: 'Выбрать Лучшего',
-  handler: (ctx) => {
-    // const members = getMembers(ctx.chat.id)
-    // if (!members) return
-    // if (members.length <= 0) return
-    // const bestMember = members.reduce<Member>(
-    //   (acc, member) =>
-    //     member.data.reactionScore > acc.data.reactionScore ? member : acc,
-    //   members[0],
-    // )
-    // ctx.reply(`На данный момент лучшим признан ${bestMember.user.first_name}`)
-  },
-}
-
 export const clownCommand: Command = {
   command: 'clown',
   description: 'Узнать статистику по клоунам',
   handler: async (ctx) => {
-    // const chatInfo = await getChatInfo(ctx.chat.id)
-    // ctx.reply(
-    //   chatInfo?.members.map((member) => `${member.user.first_name} прожил ${member.data.clownCounter} дней без клоунов`).join('\n') ||
-    //     '???',
-    // )
+    const personStatistic = await prisma.reactionMessageEvent.groupBy({
+      where: {
+        chatId: ctx.chat.id,
+        toId: {
+          not: {
+            equals: prisma.reactionMessageEvent.fields.fromId,
+          },
+        },
+        newReaction: {
+          has: '🤡',
+        },
+      },
+      by: ['toId'],
+      _min: {
+        date: true,
+      },
+      orderBy: {
+        _sum: {
+          id: 'desc',
+        },
+      },
+    })
+
+    const telegramUsers = await prisma.telegramUser.findMany({
+      where: {
+        id: {
+          in: personStatistic.map((personStat) => personStat.toId),
+        },
+      },
+    })
+
+    const tableStat = personStatistic.map((personStat) => {
+      const telegramUser = telegramUsers.find(
+        (telegramUser) => telegramUser.id === personStat.toId,
+      )
+      return [
+        telegramUser?.username || telegramUser?.first_name || 'unknown',
+        personStat._min.date ? differenceInDays(personStat._min.date, Date.now()) : 'nowhen'
+      ]
+    })
+
+    console.log('statistic:\n', tableStat)
+    ctx.reply(
+      `\`\`\`\n${table([
+        ['Имя', 'Дней без клоуна'],
+        ...tableStat,
+      ])}\n\`\`\``,
+      {
+        parse_mode: 'MarkdownV2',
+      },
+    )
   },
 }

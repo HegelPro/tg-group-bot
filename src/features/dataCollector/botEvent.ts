@@ -25,7 +25,7 @@ import { countReactionValue } from '../../reaction'
 
 export const collectMessageBotEvent: BotEvent = () =>
   bot.on('message', async (ctx) => {
-    console.log('message event')
+    // console.log('message event')
     const res1 = await prisma.telegramChat.upsert({
       where: {
         id: ctx.chat.id,
@@ -33,7 +33,9 @@ export const collectMessageBotEvent: BotEvent = () =>
       update: {},
       create: ctx.chat,
     })
-    console.log('telegramChat.upserted:', res1)
+    // console.log('telegramChat.upserted:', res1)
+    console.log('telegram date:', ctx.message.date)
+    console.log('Date telegram date:', new Date(ctx.message.date))
 
     const res2 = await prisma.telegramUser.upsert({
       where: {
@@ -43,18 +45,19 @@ export const collectMessageBotEvent: BotEvent = () =>
       create: ctx.message.from,
     })
 
-    console.log('telegramUser.upserted:', res2)
+    // console.log('telegramUser.upserted:', res2)
 
     const res3 = await prisma.messageEvent.create({
       data: {
         from_id: ctx.message.from.id,
         chat_id: ctx.chat.id,
         id: ctx.message.message_id,
-        date: new Date(ctx.message.date),
+        date: new Date(ctx.message.date * 1000),
         text: ctx.message.text,
       },
     })
-    console.log('messageEvent.created:', res3)
+
+    // console.log('messageEvent.created:', res3)
   })
 
 export const collectReactionBotEvent: BotEvent = () =>
@@ -96,7 +99,7 @@ export const collectReactionBotEvent: BotEvent = () =>
           messageId: messageReaction.message_id,
           chatId: messageReaction.chat.id,
           fromId: messageReaction.user.id,
-          date: new Date(messageReaction.date),
+          date: new Date(messageReaction.date * 1000),
           toId: foundTelegramUser.id,
           newReaction: (
             messageReaction.new_reaction.filter(
@@ -136,14 +139,20 @@ export const collectReactionBotEvent: BotEvent = () =>
     //   foundMember.data.reactionScore + reactionValue,
     // )
 
-    ctx.reply(
-      `${
-        foundTelegramUser.first_name
-      } получил ${different} респекта за ${messageReaction.new_reaction
-        .map((reaction) => (reaction.type === 'emoji' ? reaction.emoji : '???'))
-        .join(', ')} от ${messageReaction.user?.first_name || 'unknown'}`,
-        {'reply_parameters': {
-          message_id: messageReaction.message_id
-        }}
-    )
+    if (messageReaction.user?.id !== foundTelegramUser.id) {
+      ctx.reply(
+        `${
+          foundTelegramUser.first_name
+        } получил ${different} респекта за ${messageReaction.new_reaction
+          .map((reaction) =>
+            reaction.type === 'emoji' ? reaction.emoji : '???',
+          )
+          .join(', ')} от ${messageReaction.user?.first_name || 'unknown'}`,
+        {
+          reply_parameters: {
+            message_id: messageReaction.message_id,
+          },
+        },
+      )
+    }
   })
