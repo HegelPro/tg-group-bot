@@ -2,52 +2,17 @@ import { ReactionTypeEmoji } from 'grammy/types'
 import { bot } from '../../bot'
 import { BotEvent } from '../../botEvents'
 import { prisma } from '../../db'
-import { getMember, getMessage } from '../../gets'
+import { getMessage } from '../../gets'
 import { countReactionValue } from '../../reaction'
-// import { getChatInfos } from '../../gets'
-// import { createDefaultChatInfo, Message } from '../../store'
-// import { insertDefaultIfNotFound } from '../../utils'
-// import { writeChatInfos } from '../../writes'
-
-// const addMessageToChatInfo = (chatId: number) => (message: Message) => {
-//   const chatInfos = insertDefaultIfNotFound(getChatInfos())(
-//     (chat) => chat.id === chatId,
-//   )(createDefaultChatInfo(chatId)).map((chatInfo) =>
-//     chatInfo.id === chatId
-//       ? {
-//           ...chatInfo,
-//           messages: [...chatInfo.messages, message],
-//         }
-//       : chatInfo,
-//   )
-//   writeChatInfos(chatInfos)
-// }
+import { syncTelegramChat, syncTelegramUser } from './sync'
+import { declOfNum, getUserName } from '../../utils'
 
 export const collectMessageBotEvent: BotEvent = () =>
   bot.on('message', async (ctx) => {
-    // console.log('message event')
-    const res1 = await prisma.telegramChat.upsert({
-      where: {
-        id: ctx.chat.id,
-      },
-      update: {},
-      create: ctx.chat,
-    })
-    // console.log('telegramChat.upserted:', res1)
-    console.log('telegram date:', ctx.message.date)
-    console.log('Date telegram date:', new Date(ctx.message.date))
+    await syncTelegramChat(ctx.chat.id, ctx.chat)
+    await syncTelegramUser(ctx.message.from.id, ctx.message.from)
 
-    const res2 = await prisma.telegramUser.upsert({
-      where: {
-        id: ctx.message.from.id,
-      },
-      update: {},
-      create: ctx.message.from,
-    })
-
-    // console.log('telegramUser.upserted:', res2)
-
-    const res3 = await prisma.messageEvent.create({
+    await prisma.messageEvent.create({
       data: {
         from_id: ctx.message.from.id,
         chat_id: ctx.chat.id,
@@ -56,8 +21,6 @@ export const collectMessageBotEvent: BotEvent = () =>
         text: ctx.message.text,
       },
     })
-
-    // console.log('messageEvent.created:', res3)
   })
 
 export const collectReactionBotEvent: BotEvent = () =>
@@ -79,21 +42,11 @@ export const collectReactionBotEvent: BotEvent = () =>
 
     if (!foundTelegramUser) return
 
-    await prisma.telegramChat.upsert({
-      where: {
-        id: messageReaction.chat.id,
-      },
-      update: {},
-      create: messageReaction.chat,
-    })
+    await syncTelegramChat(messageReaction.chat.id, messageReaction.chat)
+
     if (messageReaction.user) {
-      await prisma.telegramUser.upsert({
-        where: {
-          id: messageReaction.user.id,
-        },
-        update: {},
-        create: messageReaction.user,
-      })
+      await syncTelegramUser(messageReaction.user.id, messageReaction.user)
+
       await prisma.reactionMessageEvent.create({
         data: {
           messageId: messageReaction.message_id,
@@ -139,20 +92,25 @@ export const collectReactionBotEvent: BotEvent = () =>
     //   foundMember.data.reactionScore + reactionValue,
     // )
 
-    if (messageReaction.user?.id !== foundTelegramUser.id) {
-      ctx.reply(
-        `${
-          foundTelegramUser.first_name
-        } получил ${different} респекта за ${messageReaction.new_reaction
-          .map((reaction) =>
-            reaction.type === 'emoji' ? reaction.emoji : '???',
-          )
-          .join(', ')} от ${messageReaction.user?.first_name || 'unknown'}`,
-        {
-          reply_parameters: {
-            message_id: messageReaction.message_id,
-          },
+    if (different === 0) return
+
+    if (messageReaction.user?.id === foundTelegramUser.id) return
+
+    const cur = declOfNum(different, ['очко', 'очка', 'очков'])
+    const user = messageReaction.user
+
+    ctx.reply(
+      `${foundTelegramUser.first_name} получил ${Math.abs(
+        different,
+      )} ${cur} социального ${
+        different > 0 ? 'одобрения' : 'осуждения'
+      } за ${messageReaction.new_reaction
+        .map((reaction) => (reaction.type === 'emoji' ? reaction.emoji : '???'))
+        .join(', ')} от ${user ? getUserName(user) : 'unknown'}`,
+      {
+        reply_parameters: {
+          message_id: messageReaction.message_id,
         },
-      )
-    }
+      },
+    )
   })

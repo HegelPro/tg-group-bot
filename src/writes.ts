@@ -1,19 +1,5 @@
 import { prisma } from './db'
 
-export const writeHourlyTimestamp = (hourlyTimestamp: Date) =>
-  prisma.global.updateMany({
-    data: {
-      hourlyTimestamp,
-    },
-  })
-
-export const writeDailyTimestamp = (dailyTimestamp: Date) =>
-  prisma.global.updateMany({
-    data: {
-      dailyTimestamp,
-    },
-  })
-
 // export const writeChatInfos = (chatInfos: ChatInfo[]) =>
 //   updateState((state) => ({
 //     ...state,

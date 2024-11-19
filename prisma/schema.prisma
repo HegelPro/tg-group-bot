@@ -26,8 +26,10 @@ model TelegramUser {
   Members       Member[]
   MessageEvents MessageEvent[]
 
-  FromReactionMessageEvent ReactionMessageEvent[] @relation("from")
-  ToReactionMessageEvent   ReactionMessageEvent[] @relation("to")
+  FromReactionMessageEvent ReactionMessageEvent[] @relation("fromReactionMessageEvent")
+  ToReactionMessageEvent   ReactionMessageEvent[] @relation("toReactionMessageEvent")
+  FromMoneyTransfer        MoneyTransfer[]        @relation("fromMoneyTransfer")
+  ToMoneyTransfer          MoneyTransfer[]        @relation("toMoneyTransfer")
 }
 
 model Member {
@@ -61,6 +63,7 @@ model TelegramChat {
   MessageEvents         MessageEvent[]
   ReactionMessageEvents ReactionMessageEvent[]
   ChatInfo              ChatInfo[]
+  MoneyTransfer         MoneyTransfer[]
 }
 
 model MessageEvent {
@@ -101,9 +104,9 @@ model ReactionMessageEvent {
 
   chat      TelegramChat @relation(fields: [chatId], references: [id])
   chatId    Float
-  from      TelegramUser @relation(fields: [fromId], references: [id], name: "from")
+  from      TelegramUser @relation(fields: [fromId], references: [id], name: "fromReactionMessageEvent")
   fromId    Float
-  to        TelegramUser @relation(fields: [toId], references: [id], name: "to")
+  to        TelegramUser @relation(fields: [toId], references: [id], name: "toReactionMessageEvent")
   toId      Float
   message   MessageEvent @relation(fields: [messageId], references: [id])
   messageId Float        @default(0)
@@ -114,8 +117,30 @@ model ReactionMessageEvent {
   different   Float
 }
 
-model Global {
-  id              Int      @id @default(autoincrement())
-  dailyTimestamp  DateTime
-  hourlyTimestamp DateTime
+enum RegularEventType {
+  daily
+  hourly
+  weekly
+  randomly
+}
+
+model RegularEvent {
+  id          Int              @id @default(autoincrement())
+  date        DateTime?
+  nextDate    DateTime
+  destroyDate DateTime?
+  type        RegularEventType
+  text        String?
+  video       String?
+}
+
+model MoneyTransfer {
+  id         Int           @id @default(autoincrement())
+  chat       TelegramChat  @relation(fields: [chatId], references: [id])
+  chatId     Float
+  fromUser   TelegramUser? @relation(fields: [fromUserId], references: [id], name: "fromMoneyTransfer")
+  fromUserId Float?
+  value      Float
+  toUser     TelegramUser  @relation(fields: [toUserId], references: [id], name: "toMoneyTransfer")
+  toUserId   Float
 }

@@ -2,13 +2,14 @@ import { Command } from '../../command'
 import table from 'text-table'
 import { reactionToValue } from './config'
 import { prisma } from '../../db'
-import { differenceInDays } from 'date-fns'
+import { differenceInDays, format, intlFormat } from 'date-fns'
+import { InlineKeyboard } from 'grammy'
+import { getUserName } from '../../utils'
 
 export const getStatisticCommand: Command = {
   command: 'statistic',
   description: 'Узнать респект пацанов',
   handler: async (ctx) => {
-    console.log('statistic')
     const personStatistic = await prisma.reactionMessageEvent.groupBy({
       where: {
         chatId: ctx.chat.id,
@@ -28,7 +29,6 @@ export const getStatisticCommand: Command = {
         },
       },
     })
-    console.log('personStatistic:', personStatistic)
 
     const telegramUsers = await prisma.telegramUser.findMany({
       where: {
@@ -43,7 +43,7 @@ export const getStatisticCommand: Command = {
         (telegramUser) => telegramUser.id === personStat.toId,
       )
       return [
-        telegramUser?.username || telegramUser?.first_name || 'unknown',
+        telegramUser ? getUserName(telegramUser) : 'unknown',
         personStat._sum.different || 0,
         telegramUser?.is_premium ? 'Буржуй' : 'Пролетариат',
       ]
@@ -52,7 +52,7 @@ export const getStatisticCommand: Command = {
     console.log('statistic:\n', tableStat)
     ctx.reply(
       `\`\`\`\n${table([
-        ['Имя', 'Респект коины', 'Телеграм статус'],
+        ['Имя', 'Очки_социального_одобрения', 'Телеграм_статус'],
         ...tableStat,
       ])}\n\`\`\``,
       {
@@ -78,6 +78,20 @@ export const getReactionValueCommand: Command = {
         parse_mode: 'MarkdownV2',
       },
     )
+  },
+}
+
+export const test2Command: Command = {
+  command: 'test2',
+  hide: true,
+  description: 'Тест',
+  handler: async (ctx) => {
+    // ctx.callbackQuery('')
+    // const makeup = new InlineKeyboard().text('textBtn', `test-query:user=${ctx.message?.from.id}`)
+    const makeup = new InlineKeyboard()
+      .text('text1Btn', 'test-query')
+      .text('text2Btn', 'click-payload')
+    ctx.reply('Test', { reply_markup: makeup })
   },
 }
 
@@ -114,7 +128,7 @@ export const clownCommand: Command = {
         },
       },
       by: ['toId'],
-      _min: {
+      _max: {
         date: true,
       },
       orderBy: {
@@ -137,15 +151,20 @@ export const clownCommand: Command = {
         (telegramUser) => telegramUser.id === personStat.toId,
       )
       return [
-        telegramUser?.username || telegramUser?.first_name || 'unknown',
-        personStat._min.date ? differenceInDays(personStat._min.date, Date.now()) : 'nowhen'
+        telegramUser ? getUserName(telegramUser) : 'unknown',
+        personStat._max.date
+          ? differenceInDays(Date.now(), personStat._max.date)
+          : 'nowhen',
+        intlFormat(personStat._max.date || Date.now(), {
+          locale: 'ru',
+        }),
       ]
     })
 
     console.log('statistic:\n', tableStat)
     ctx.reply(
       `\`\`\`\n${table([
-        ['Имя', 'Дней без клоуна'],
+        ['Имя', 'Дней без клоуна', 'Дата последнего клоуна'],
         ...tableStat,
       ])}\n\`\`\``,
       {

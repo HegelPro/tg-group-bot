@@ -45,4 +45,3 @@ export const getMember = (chatId: number) => (memberId: number) =>
     },
   })
 
-export const getGlobalData = () => prisma.global.findFirstOrThrow()
